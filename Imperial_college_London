@@ -1,0 +1,112 @@
+import urllib.request
+import re
+import csv
+import time
+
+# 获取课程列表中所有专业的独立链接
+def GetSubjectCode(url):
+    subject_list = []
+    html = urllib.request.urlopen(url).read()
+    html = html.decode('utf-8')
+    subject = re.findall(r'<li class="course">.*?<a title=.*?href=(.*?)>',html,re.S)
+    for i in range(len(subject)):
+        subject_list.append(subject)
+    return subject_list
+
+# 解析页面，提取需要的内容
+def parser_page(url):
+    html = urllib.request.urlopen(url).read()
+    html = html.decode('utf-8')
+    # 保存为list格式，方便写入csv
+    info = []
+    try:
+        # 正则匹配“专业名称”
+        major = re.search('<h1>(.*?)</h1>', html, re.S)
+        # 正则匹配“最低学历要求”
+        requirement = re.search('>Minimum academic requirement</h3>.*?<p>(.*?)></p>', html, re.S)
+        # 正则匹配“核心主修课程”
+        core_modules = re.search('Core modules</h3>(.*?)>Optional modules</h3>', html, re.S)
+        if not core_modules:
+            core_modules = re.search('Core modules</h3>(.*?)>Optional modules \– Group 1</h3>', html, re.S)
+        if not core_modules:
+            core_modules = re.search('Core modules</h3>(.*?)>Research project</h3>', html, re.S)
+        # 正则匹配“选修课程”
+        # optional_modules = re.search('Optional modules</h3>(.*?)>Research project</h3>', html, re.S)
+        # if not optional_modules:
+        #     optional_modules = re.search('optional modules below\.</p>(.*?)>Project</h3>', html, re.S)
+        # 正则匹配“研究项目”
+        # reseach_project = re.search('Research project</h3>(.*?)>Teaching methods</h3>', html, re.S)
+        # if not reseach_project:
+        #     reseach_project = re.search('Research project</h3>(.*?)>Teaching</h3>', html, re.S)
+        # if not reseach_project:
+        #     reseach_project = re.search('Project</h3>(.*?)</a>Entry requirements</h2>', html, re.S)
+        # 正则匹配“教学方法”
+        # teaching_methods = re.search('Teaching methods</h3>(.*?)>Assessment methods</h3>', html, re.S)
+        # if not teaching_methods:
+        #     teaching_methods = re.search('Teaching</h3>(.*?)>Assessment</h3>', html, re.S)
+        # 正则匹配“评估方法”
+        # assessment_methods = re.search('Assessment methods</h3>(.*?)</a>Entry requirements</h2>', html, re.S)
+        # if not assessment_methods:
+        #     assessment_methods = re.search('Assessment</h3>(.*?)</a>Entry requirements</h2>', html, re.S)
+        # 正则匹配“学费（欧盟）”
+        tuition = re.search('>2019 entry.*?<td>(.*?)</td>.*?>2019 entry.*?<td>(.*?)</td>', html, re.S)
+        # tuition_eu = re.search(
+        #     '>Tuition fees \(Home and EU students\)</h3>.*?>2019 entry</th></tr></thead><tbody><tr><td>(.*?)</td></tr></tbody></table><p>',
+        #     html, re.S)
+        # # 正则匹配“学费（海外国家）”
+        # tuition_os = re.search(
+        #     '>Tuition fees \(Overseas and Islands students\)</h3>.*?>2019 entry</th></tr></thead><tbody><tr><td>(.*?)</td></tr></tbody></table><p>',
+        #     html, re.S)
+        # major = re.search('<h1>(.*?)</h1>', html, re.S)
+        # requirement = re.search('>Minimum academic requirement</h3>.*?<p>(.*?)></p>', html, re.S)
+        # core_modules = re.search('core modules below\.</p>(.*?)>Optional modules</h3>', html, re.S)
+        # Optional_modules = re.search('Optional modules</h3>(.*?)>Research project</h3>', html, re.S)
+        # reseach_project = re.search('Research project</h3>(.*?)>Teaching methods</h3>', html, re.S)
+        # teaching_methods = re.search('Teaching methods</h3>(.*?)>Assessment methods</h3>', html, re.S)
+        # assessment_methods = re.search('Assessment methods</h3>(.*?)</a>Entry requirements</h2>', html, re.S)
+        # tuition_eu = re.search(
+        #     '>Tuition fees \(Home and EU students\)</h3>.*?>2019 entry</th></tr></thead><tbody><tr><td>(.*?)</td></tr></tbody></table><p>',
+        #     html, re.S)
+        # tuition_os = re.search(
+        #     '>Tuition fees \(Overseas and Islands students\)</h3>.*?>2019 entry</th></tr></thead><tbody><tr><td>(.*?)</td></tr></tbody></table><p>',
+        #     html, re.S)
+        info.append(major.group(1))
+        info.append(requirement.group(1))
+        info.append(core_modules.group(1))
+        # info.append(optional_modules.group(1))
+        # info.append(reseach_project.group(1))
+        # info.append(teaching_methods.group(1))
+        # info.append(assessment_methods.group(1))
+        info.append(tuition.group(1))
+        info.append(tuition.group(2))
+        return info
+    except:
+        print("错误链接：{n}".format(n=url))
+
+# 写入csv文件
+def write_to_csv(data):
+    out = open('Imperial_college_london.csv', 'a', newline='')
+    csv_write = csv.writer(out, dialect='excel')
+    csv_write.writerow(data)
+
+
+url = 'http://www.imperial.ac.uk/study/pg/courses/'
+
+if __name__ == '__main__':
+    course_list = []
+    code = GetSubjectCode(url)
+    co = code[0]
+    for i in co:
+        u = eval(i)
+        new_u = 'http://www.imperial.ac.uk' + u
+        course_list.append(new_u)
+    count = 1
+    for a in course_list:
+        print("正在抓取第{n}个专业".format(n=count))
+        time.sleep(10)
+        try:
+            list = parser_page(a)
+            write_to_csv(list)
+        except:
+            pass
+        count = count + 1
